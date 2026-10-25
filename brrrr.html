@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>an open door in the middle of a storm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Barlow+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--teal:#6fd6c8;--teal2:#2f8f86;--blood:#b3262e;--paper:#e9efe9;--ui:'Barlow Condensed','Arial Narrow',sans-serif;--serif:'Cormorant Garamond',Georgia,serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#03080a;color:var(--paper);overflow:hidden;font-family:var(--ui);cursor:none}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 45%,rgba(0,0,0,.6) 100%)}
+.pin{position:fixed;left:0;top:0;z-index:5;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:1.5px solid var(--teal);background:rgba(3,14,16,.78);color:var(--teal);font:600 13px/23px var(--ui);text-align:center;transition:opacity .25s,background .2s;cursor:pointer;backdrop-filter:blur(2px)}
+.pin::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--teal);animation:ping 2.4s infinite}
+.pin.done{background:var(--teal2);color:#02100f;border-color:#bff}.pin.done::after{display:none}
+.pin:hover{background:var(--teal);color:#02100f}
+.pin.hide{opacity:0;pointer-events:none}
+@keyframes ping{0%{transform:scale(.8);opacity:.9}100%{transform:scale(2);opacity:0}}
+#tag{position:fixed;z-index:7;pointer-events:none;padding:5px 10px;background:rgba(3,12,14,.92);border:1px solid var(--teal2);font:500 15px var(--ui);color:var(--teal);opacity:0;transform:translate(16px,16px);transition:opacity .2s;white-space:nowrap}
+#hud{position:fixed;z-index:6;top:0;left:0;padding:max(16px,env(safe-area-inset-top)) 22px 0;pointer-events:none}
+#hud h1{font:500 1.45rem var(--serif);color:var(--paper);opacity:.92}
+#hud p{font:400 1rem var(--ui);color:#8fb3ae;margin-top:2px}
+#list{position:fixed;z-index:6;left:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;max-width:230px}
+#list button,#mute{all:unset;cursor:pointer;font:500 1rem var(--ui);color:#7ea39e;padding:4px 10px;border-left:2px solid #17343a;transition:.25s}
+#list button:hover,#list button:focus-visible{color:#fff;border-color:var(--teal)}
+#list button.done{color:var(--teal);border-color:var(--teal2)}
+#mute{position:fixed;z-index:6;right:16px;bottom:max(14px,env(safe-area-inset-bottom));border:1px solid #1d4a50;color:var(--teal)}
+#close{position:fixed;z-index:6;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);display:none;padding:12px 26px;background:var(--blood);color:#fff;border:0;font:600 1.15rem var(--ui);cursor:pointer;box-shadow:0 0 30px rgba(179,38,46,.5)}
+#close.show{display:block}
+#panel{position:fixed;z-index:8;top:0;right:0;height:100%;width:min(540px,100vw);background:linear-gradient(180deg,#eef2ec,#dfe6df);color:#17262a;transform:translateX(105%);transition:transform .7s cubic-bezier(.2,.7,.2,1);display:flex;flex-direction:column;box-shadow:-30px 0 80px rgba(0,0,0,.7);cursor:default}
+body.open #panel{transform:none}
+#panel header{padding:max(26px,env(safe-area-inset-top)) 34px 16px;border-bottom:2px solid #17262a}
+#panel header small{font:500 1rem var(--ui);color:#4b6a66}
+#panel h2{font:600 2.1rem/1.1 var(--serif);margin-top:2px}
+#panel h3{font:italic 400 1.25rem var(--serif);color:var(--blood);margin-top:4px}
+#txt{flex:1;overflow-y:auto;padding:22px 34px 20px;font:500 1.28rem/1.7 var(--serif);scrollbar-width:thin}
+#txt p{margin-bottom:.95em}
+#panel footer{display:flex;justify-content:space-between;gap:10px;padding:14px 34px max(18px,env(safe-area-inset-bottom));border-top:1px solid #9fb2ad}
+#panel footer button{font:600 1.05rem var(--ui);padding:9px 16px;background:#17262a;color:#e9efe9;border:0;cursor:pointer}
+#panel footer button:hover{background:var(--blood)}
+#intro,#end{position:fixed;inset:0;z-index:12;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;background:#020608;transition:opacity 1.6s;cursor:default}
+#intro h1,#end h1{font:500 clamp(2rem,6vw,3.6rem)/1.15 var(--serif);margin-bottom:18px}
+#intro p,#end p{font:400 1.3rem/1.6 var(--serif);max-width:34em;color:#b8cfcb;margin-bottom:12px}
+#intro button{margin-top:22px;padding:13px 34px;font:600 1.2rem var(--ui);background:transparent;color:var(--teal);border:1.5px solid var(--teal);cursor:pointer}
+#intro button:hover{background:var(--teal);color:#02100f}
+#end{opacity:0;pointer-events:none;background:rgba(2,6,8,.94)}#end.show{opacity:1;pointer-events:auto}
+.gone{opacity:0;pointer-events:none}
+@media(max-width:900px){#list{top:auto;bottom:46px;left:0;right:0;transform:none;flex-direction:row;overflow-x:auto;max-width:none;padding:0 10px}#list button{white-space:nowrap}#panel{top:auto;bottom:0;height:62vh;width:100%;transform:translateY(105%)}#close{bottom:84px}}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas><div id="vig"></div>
+<div id="hud"><h1>an open door in the middle of a storm</h1><p id="cnt">0 of 11 regions opened</p></div>
+<nav id="list" aria-label="regions"></nav>
+<div id="tag"></div>
+<button id="close">close the incision</button>
+<button id="mute">sound on</button>
+<aside id="panel" aria-live="polite">
+  <header><small id="pn"></small><h2 id="pt"></h2><h3 id="ps"></h3></header>
+  <div id="txt"></div>
+  <footer><button id="pv">previous</button><button id="px">close</button><button id="nx">next</button></footer>
+</aside>
+<div id="intro"><h1>an open door in the middle of a storm</h1>
+<p>You are the surgeon, and this is me on the table.</p>
+<p>There are eleven places to open. Each one is a part of me I could only explain in full paragraphs, so I wrote them out. Drag to turn the head around. Click a region to cut. Go slowly.</p>
+<button id="go">scrub in</button></div>
+<div id="end"><h1>yours, still learning.</h1><p>The rain will come again. I only hope that, when it does, we will recognize what is in front of us, and remember to stop.</p></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const R=[
+{n:'Prefrontal cortex',t:'the man in the rain',x:175,y:170,s:`My love,
+Last winter, I watched a man kneel beside a stranger in the rain.
+It was late enough that the shops had pulled their shutters down, and the streetlights were turning the puddles into little pieces of gold. The man had dropped his groceries. Or perhaps someone had knocked them from his hands. I cannot remember. What I remember is that he was old, that his fingers trembled as he tried to gather the oranges rolling toward the gutter, and that people kept walking around him with the practiced indifference of people who had somewhere important to be.
+Then another man stopped.
+He was wearing a beautiful coat, the kind of coat that makes you assume a person has arranged his life properly. He placed his umbrella over the stranger, knelt in the water, and began collecting the oranges. One had split open against the pavement. He picked it up too, wiped it with his sleeve, and put it back into the bag.
+The old man said something I could not hear. The stranger smiled, helped him stand, and left.
+I stood beneath the awning of a closed shop, holding an umbrella I had not opened.
+I don't know why that moment has followed me for so long. Perhaps because I had spent the entire day being angry about something that, in retrospect, was embarrassingly small. Perhaps because I had passed people that day without really seeing them. Or perhaps because I recognized something uncomfortable in the scene: the stranger had done something good without an audience, without a reward, without even the certainty that the old man would remember his face.
+And I wondered whether I had ever been good when goodness offered me nothing.
+I have wanted to tell you many things about life, my love. I have wanted to explain the world to you, to offer you the conclusions I have gathered from my disappointments, to tell you which roads to avoid and which kinds of people to trust. I have wanted to sound like someone who has understood enough to keep the people he loves from getting hurt.
+But the older I become, the less certain I am that understanding can save anyone.
+And the more I love you, the more frightened I become of the things I still do not understand.`},
+{n:'Parietal lobe',t:'knowing myself',x:475,y:160,s:`There was a time when I thought knowing myself meant being able to describe myself.
+I could tell you what I believed in, what I hated, what I would never tolerate. I knew which principles I would defend and which kinds of people I would never become. I had a name for every virtue I admired and a judgment for every weakness I saw in somebody else.
+I thought this meant I knew who I was.
+Then life began introducing me to myself under circumstances I had not rehearsed.
+I discovered that I could believe in patience and still become cruel when I was tired. That I could preach honesty and use the truth as a weapon when I wanted to win an argument. That I could call myself protective when what I really wanted was control over an outcome that frightened me. I learned that I could apologize for hurting someone and still spend the entire apology explaining why I had been justified in doing it.
+There is a particular humiliation in catching yourself becoming the very thing you once condemned.
+It is easy to recognize arrogance when it belongs to someone who has less to lose than you. It is easy to praise humility when nobody is questioning your worth. It is easy to advocate forgiveness when you are not the one who has been betrayed.
+The real test begins when your principles demand something from you that your pride does not want to give.
+I am telling you this because I do not want you to mistake my self-awareness for mastery. I can recognize the shape of my flaws and still find myself reaching for them when I am afraid. I can understand where a wound began and still use that wound to justify making another person bleed.
+Perhaps growing up is not the moment you finally become the person you imagined. Perhaps it is the moment you can no longer pretend that the distance between the two is somebody else's fault.
+I want to become better, my love. But I am learning that wanting to become better is not the same as being better, and that knowing the right words can sometimes become the most elegant way of avoiding the right actions.`},
+{n:'Temporal lobe',t:'what I inherited',x:330,y:355,s:`Some of what lives inside us was there before we arrived.
+We inherit more than faces, surnames, and the particular shape of our hands. We inherit silences. We inherit fears whose origins nobody remembers. We inherit the rules that kept our parents alive, even when those rules make it difficult for us to live.
+Some fathers teach their sons that a man must never be seen crying because that is what they were taught by men who had never been allowed to cry themselves. Some mothers swallow their disappointments so their girls can grow up believing that sacrifice is simply what love looks like. Some families become so accustomed to surviving that they forget survival was never supposed to be the entirety of a life.
+And beyond our homes, there are entire societies built around inherited anxieties.
+We tell young men to become successful, then teach them to measure their worth by how much money they can bring home. We tell people to follow their dreams while making dignity increasingly expensive. We praise hard work, but we rarely speak honestly about the opportunities distributed before the work even begins. We tell the struggling to be patient, sometimes because patience is necessary, and sometimes because their suffering is easier to tolerate than the changes their suffering demands.
+A person can spend years trying to escape poverty and eventually discover that poverty has followed him into the way he thinks. He may earn enough to survive comfortably and still feel poor whenever someone else buys something he cannot afford. He may become successful and remain terrified of returning to the person he was when he had nothing.
+I have seen people become so afraid of humiliation that they would rather humiliate someone else first.
+I have seen kindness treated as a weakness because the people offering it had never learned how to distinguish gentleness from surrender.
+And I have wondered how many of the things we call personality are simply old injuries that have found a socially acceptable way to introduce themselves.
+But I do not want to use inheritance as an excuse. There is a difference between understanding the fire that burned through a family and deciding that every generation must carry a flame.
+Perhaps one of the most important things we can do for the people who come after us is to become the place where certain things stop.
+The anger that never learned to speak without shouting. The shame that disguises itself as superiority. The fear that turns love into surveillance. The belief that suffering gives us permission to make others suffer.
+I want us to inherit the tenderness of those who came before us without inheriting every way they were taught to survive.
+I want our love to be a place where the past is understood but not blindly obeyed.`},
+{n:'Motor cortex',t:'ambition',x:325,y:150,s:`I used to believe that success would make me peaceful.
+I imagined a future in which the work was finished, the money was sufficient, the people I loved were safe, and I could finally sit still without feeling that stillness was a form of failure.
+I thought peace was something waiting at the end of ambition.
+But ambition is a peculiar animal. Feed it one achievement, and it begins asking what comes next. Give it a little recognition, and it starts looking toward someone receiving more. Let it build you a house, and it will immediately begin measuring the neighboring one.
+There is nothing inherently wrong with wanting a better life. I want one for myself. I want one for you. I want the freedom to make choices without every decision being governed by what we can afford. I want to be able to help the people who helped me. I want our ordinary days to contain more breathing room than the lives that came before ours sometimes allowed.
+But I am afraid of becoming a man who sacrifices every present moment for a future that keeps moving away from him.
+What good would it be to spend years building a life with you if I became too absent to participate in it? What would be the point of becoming capable of providing everything except the feeling that you are loved? What would I have accomplished if I finally arrived at the place I once dreamed of and discovered that I had trained myself to experience every achievement as an insufficient beginning?
+I do not want to love you as a reward I promise myself for succeeding.
+I do not want to postpone tenderness until I have earned the right to be gentle. I do not want to make our future the only place where I allow myself to be happy.
+There may be years when I am still trying, still failing, still learning how to build something stable out of what I have been given. I hope you will understand that ambition can be an expression of love. But I hope I will remember that love cannot be reduced to ambition.
+You should not have to compete with the life I am trying to build for us.
+And I should not have to destroy myself to prove that I deserve to build it.`},
+{n:"Broca's area",t:'what I do not say',x:252,y:292,s:`There are nights when I think about how little of ourselves we actually manage to communicate.
+We speak in sentences and assume we have been understood. We say I'm fine because explaining the truth would take too long. We become quiet because we are afraid of sounding needy, then resent the people who fail to hear what we have not said. We learn to perform strength so convincingly that, when we finally need help, the people around us cannot tell whether our silence is ordinary or an emergency.
+Sometimes the people who love us most are standing closest to the door we have locked from the inside.
+I am afraid of doing that to you.
+I am afraid that one day I will be so occupied with appearing capable that I will forget to tell you when I am struggling. That I will mistake being needed for being loved, and being respected for being understood. That I will protect my pride so carefully that you will have to live with the consequences of a war you never declared.
+And I am afraid of asking too much of you, too.
+I cannot make you responsible for every wound I have carried into this relationship. I cannot expect you to understand every silence, repair every disappointment, or find the perfect words for a pain I have not learned to explain. Love can accompany someone through their struggles, but it cannot perform their inner work on their behalf.
+I want you to know me, my love. Not just the person who can make plans, offer reassurance, speak about the future, or find a beautiful way to describe a difficult feeling. I want you to know the person who sometimes does not know what to do with his own heart.
+And I want to know you in the same way.
+Not as a promise that you will never disappoint me, but as a person whose interior world will always be larger than my interpretation of it. Not as someone I can understand once and then assume I understand forever, but as someone I must keep meeting, even after familiarity tempts me to stop paying attention.
+Perhaps intimacy is not the achievement of finally knowing another person completely.
+Perhaps it is the decision to remain curious about them after you have learned enough to become careless.`},
+{n:'Orbitofrontal cortex',t:'goodness that is not rewarded',x:160,y:365,s:`I wish I could tell you that the world rewards people who try to be good.
+It would make a beautiful letter. It would also be a lie.
+I have watched people act with sincerity and receive betrayal in return. I have seen people work honestly while others advance through connections they never had, privileges they never earned, or compromises they would never admit to making. I have watched people apologize and still lose someone they wanted to keep. I have seen kindness arrive too late to prevent suffering, and love remain genuine even after it became unable to repair what had been broken.
+There is no reliable arithmetic by which the goodness of a person guarantees the goodness of their circumstances.
+And if we are honest, some of our disappointment comes from having believed otherwise.
+We do good things and, somewhere beneath the goodness, we hope the world has noticed. We sacrifice and hope to be appreciated. We remain loyal and hope loyalty will be returned. We endure and hope endurance will eventually be compensated.
+Then, when the reward does not arrive, we begin questioning whether the goodness was worth it.
+I have asked myself that question.
+I do not think the answer is that goodness should make us indifferent to injustice. If someone exploits your kindness, you are allowed to name the exploitation. If someone harms you, forgiveness does not require you to place yourself within their reach again. If a system rewards cruelty, you do not have to call the cruelty acceptable because resisting it is difficult.
+Mercy without boundaries can become permission. Patience without action can become surrender. Forgiveness without honesty can become another form of silence.
+But I am beginning to believe that goodness loses something essential when it becomes merely a transaction with the universe.
+If I am kind only because I expect kindness to return, then my kindness is still waiting for a price. If I am honest only because honesty will make me successful, then I have not yet decided whether truth matters when it costs me. If I love you only because I believe love will protect me from suffering, then I may mistake the first great disappointment for evidence that I was wrong to love you.
+I cannot promise that doing the right thing will keep us safe.
+I can only hope that, when life gives us reasons to become harder, we will be careful about what we allow it to take from us.`},
+{n:'Insula',t:'faith, and the silence after prayer',x:440,y:300,s:`There is a particular silence that follows prayer.
+Not the silence of an empty room, but the silence in which you become aware that you have spoken honestly and still do not possess the answer you came looking for.
+I know the movements of salah. I know how to wash my hands, my face, my arms; how to stand, bow, prostrate, and return to standing. I know the words I have repeated since childhood. I know the comfort of hearing the adhan interrupt the ordinary machinery of a day.
+And still, there have been moments when my forehead touched the ground and my mind remained crowded with questions.
+Why does a sincere person sometimes suffer for something they did not do? Why do some prayers seem to find their answers while others appear to dissolve into years? Why does a person who believes in Allah still struggle with fear? Why does gratitude sometimes coexist with grief so intense that gratitude feels almost impossible to express?
+I used to think that stronger faith would make these questions disappear.
+Perhaps I had confused faith with certainty about every event. Perhaps I wanted Allah to give me not only guidance, but a complete explanation of the road ahead, including assurances that I would not lose what I loved.
+But tawakkul is not a contract in which we perform our obligations and demand that life follow our preferred design. Sabr is not proof that pain has stopped hurting. And dua is not a mechanism by which we gain ownership over the outcome.
+We believe that Allah knows what we do not know. We believe that our lives are not outside His knowledge or power. But that belief does not give us permission to announce why a particular person suffered, why a particular loss occurred, or what hidden purpose must have justified it.
+Sometimes we speak too quickly about divine wisdom because another person's unanswered grief makes us uncomfortable.
+We tell them that everything happens for a reason when what they need, in that moment, is someone willing to sit beside them without pretending to know the reason.
+I think of the Prophet Ayyub, peace be upon him, whose suffering is remembered alongside his patience and his turning toward Allah. I think of Yaqub, peace be upon him, grieving Yusuf so deeply that his sorrow became part of his story. Their faith did not require the denial of pain.
+Perhaps I have been unfair to myself when I assumed that struggling meant I had failed to trust Allah.
+Perhaps the more honest question is not whether I can eliminate every doubt, but whether I can keep turning toward Him without turning my unanswered questions into accusations against the people around me.
+I want to have faith that makes me more merciful, not more certain that I understand everyone else's fate. I want my prayers to change how I treat people, not simply how I feel about myself. I want to practice gratitude without using it to silence grief, and practice patience without using it to postpone every difficult decision.
+And when I ask Allah to guide me, I want to be prepared for the possibility that guidance may demand a change in me rather than a change in the circumstances I keep asking Him to remove.
+Still, my love, I do not know why every door opens or closes.
+I only know that I must be careful not to confuse my inability to see the whole picture with the certainty that there is no picture beyond what I can see.`},
+{n:'Cerebellum',t:'hands I never saw',x:645,y:424,s:`I sometimes wonder how many times my life has been saved by decisions I will never know about.
+Perhaps someone once chose not to retaliate against a person who would later become important to my family. Perhaps someone offered my father a kindness that changed the course of an ordinary day. Perhaps a stranger's generosity gave someone enough strength to make a decision that eventually made my existence possible.
+I cannot trace these things. I cannot thank every person whose restraint, sacrifice, or generosity became part of the invisible architecture of my life.
+But I know that I did not arrive here alone.
+The language in which I think was given to me. The prayers I know were taught to me. Opportunities I sometimes call achievements were made possible by circumstances I did not create. Even the strength I take pride in may have been built from the kindness of people who held me together when I was too young to understand that I was being held.
+This realization should make a person grateful.
+It should also make them humble.
+Because if other people helped shape the life I now inhabit, then I, too, am helping shape lives I may never fully understand.
+The way I speak to someone who has disappointed me may follow them long after I have forgotten the conversation. The opportunity I offer someone may become the reason they attempt something they once believed impossible. The apology I refuse to make may teach someone that pride matters more than repair. The gentleness I choose may become a memory they return to on a night when they are beginning to believe that nobody is gentle anymore.
+We spend so much time asking what life owes us that we sometimes forget to ask what our presence is costing the people around us.
+And what it might be giving them.
+I want us to remember this when we speak about destiny. We do not control everything that happens to us, but our decisions are not meaningless. We are not responsible for every consequence that follows us, but we are responsible for what we knowingly do to others. We cannot guarantee the outcome of a good action, yet we can still choose the action.
+Perhaps this is one of the quietest forms of gratitude: to become, where possible, the kind of person whose existence makes somebody else's life a little less difficult.
+Not a savior. Not a hero. Just a person who understands that they, too, are passing through other people's stories.`},
+{n:'Occipital lobe',t:'what I see in myself and have not yet changed',x:660,y:255,s:`I need to tell you something I find difficult to admit.
+There are things I understand about myself that I have not yet managed to change.
+I know that fear can make me defensive. I know that disappointment can make me withdraw. I know that, sometimes, I want reassurance so badly that I become impatient with the uncertainty another person is entitled to feel. I know that I can spend too much time examining my intentions and too little time examining the effects of my behavior.
+I can explain where these things came from.
+But an explanation is not an apology, and an apology is not a transformation.
+If I have hurt you, the fact that I was afraid does not undo the hurt. If I have failed to listen, the fact that I was overwhelmed does not mean you were heard. If I have made you carry the consequences of something I refused to confront in myself, my awareness of the pattern cannot substitute for my responsibility to change it.
+I do not want to offer you a beautiful description of the man I hope to become and ask you to live indefinitely with the man I am.
+I want to learn how to pause before the words that cannot be retrieved. How to hear criticism without immediately turning it into a trial of my character. How to apologize without smuggling a defense into every sentence. How to accept that I can be loved and still be wrong.
+And when I fail, and I know that I will fail sometimes, I want to learn the difference between returning to the work and returning to the excuse.
+In Islam, tawbah is not merely the performance of regret. When we wrong another person, the matter cannot always be resolved privately between ourselves and Allah while the rights of the person we harmed remain neglected. There may be a repair to make, a debt to return, a wrong to acknowledge, or a boundary to respect.
+I find something sobering in that.
+It means that the inner life cannot be separated from what we do in the world. A person cannot become righteous simply by feeling deeply about righteousness.
+I want to remember that when I am tempted to congratulate myself for understanding my own darkness.
+Understanding it is useful.
+Taking responsibility for what it does is harder.
+And perhaps that is where the work begins again, every time.`},
+{n:'Brainstem',t:'what I cannot promise, and what I can',x:485,y:470,s:`My love, I cannot promise you a life in which we never disappoint one another.
+I cannot promise that our efforts will always be rewarded, that our prayers will be answered in the forms we recognize, that our plans will survive the years unchanged, or that we will always understand why something happened when it did.
+I cannot even promise that the person I am today will remain exactly the person you need tomorrow.
+But I can tell you what I want to keep learning.
+I want to learn how to be ambitious without treating the present as an obstacle. How to protect you without confusing protection with possession. How to remain loyal without becoming blind, to remain patient without becoming passive, and to remain strong without making tenderness feel like a defeat.
+I want to learn how to love you without demanding that you become proof that life has been fair to me.
+Because you are not a reward I have earned for surviving my difficulties. You are not an answer to every question I have ever asked. You cannot be responsible for making my existence meaningful, and I do not want to place the impossible weight of that responsibility on your shoulders.
+I love you because you are a person, not because you can save me from being one.
+And I hope we can build something in which neither of us must disappear into the other's needs to prove that the love is real.
+There will be days when the world makes us question the point of being gentle. There will be days when our efforts seem small beside the things we cannot change. There may be losses for which no explanation feels sufficient, and disappointments that leave us unable to recognize the future we once imagined.
+On those days, I hope we will be allowed to grieve without being accused of ingratitude. I hope we will be able to pray without pretending we have no questions. I hope we will be honest enough to recognize when we have hurt each other, and humble enough to do something about it.
+I hope we will remember that the absence of a reward does not make every sacrifice meaningless, just as the presence of a reward does not make every action righteous.
+And when we cannot understand what Allah has written for us, I hope we will be careful with one another while we wait to understand what, if anything, we can.
+Perhaps love is not the promise that we will never be wounded.
+Perhaps it is the work of refusing to make our wounds the final authority over how we treat each other.`},
+{n:'Hippocampus',t:'the man in the rain, again',x:410,y:392,s:`I still think about the man in the rain.
+Sometimes I wonder whether the old man reached home safely, whether he told anyone what happened, whether he even remembered the face beneath the beautiful coat. I wonder if the stranger went home feeling that he had done something important, or if he simply continued with his evening, unaware that someone beneath a shop awning had been watching him.
+I will never know.
+Perhaps the old man forgot him before he reached his front door. Perhaps the stranger forgot the encounter before he reached his own.
+And perhaps that is what makes the memory so difficult for me to leave alone.
+The act was real even if its consequences remained invisible. The kindness mattered even if it did not become a story anyone told. The man did not need to know what his action would mean to me, because he had not performed it for me.
+I think I understand something now that I did not understand while standing beneath that awning.
+I had been waiting for the world to give me reasons to believe that goodness was worth the trouble. I had been looking for guarantees, for evidence that the effort would lead somewhere, that the people who tried would eventually be rewarded, that the right decisions would protect us from the wrong endings.
+But the stranger had no guarantee. He had only an old man in the rain, oranges rolling into the street, and the decision to stop.
+I wish I could tell you that I have learned to live like that.
+I haven't.
+I still want certainty. I still want to know that the people I love will be safe. I still want my efforts to mean something, my prayers to be answered, my mistakes to become lessons quickly enough that I do not repeat them. I still want to believe that if I become good enough, careful enough, faithful enough, I might finally reach a place where nothing can surprise me with its cruelty.
+Perhaps I will spend the rest of my life learning that this place does not exist.
+Tonight, before writing this letter, I made wudu. The water was cold. I prayed, sat for a while, and asked Allah to make me better than the person my fear sometimes allows me to become.
+I did not receive an answer I could describe to you.
+Afterward, I noticed that I had left the tap running.
+I turned it off.
+It was such a small thing that I almost laughed at myself for remembering it. There was no revelation in it, no sign that my questions had been settled. Only water that had continued to run because I had forgotten to stop it, and a hand that eventually returned to do what was necessary.
+I thought of the stranger in the rain.
+I thought of you.
+And I wondered how much of a life is made of these small returns: to the person we have hurt, to the prayer we have neglected, to the truth we have avoided, to the work we keep postponing because we are waiting to become the kind of person who will do it perfectly.
+I do not know whether we will get everything right, my love.
+I do not know which of our dreams will survive us, which prayers will take a form we recognize, or what the years will ask us to surrender. I do not know whether the person I am trying to become will arrive before the opportunities to become him have passed.
+But tomorrow, there will be people in the rain.
+There will be someone whose burden I can make lighter, someone whose pain I will fail to notice, someone I will misunderstand, and someone who will misunderstand me. There will be decisions whose consequences I cannot predict and moments when I must choose without knowing whether the world will reward the choice.
+And somewhere in the middle of all that, there will be you and me, still learning the difficult difference between loving one another and knowing how to love one another well.
+I hope that when the time comes, I will stop.
+I hope that I will have the humility to kneel beside what has fallen, even when my clothes are clean and my destination is important. I hope that I will remember how much of my own life has been held together by hands I never saw.
+And if I forget, as I probably will, I hope I will find my way back.
+Not because I am certain that goodness will save me.
+Not because I have finally understood the plan.
+But because, after everything I do not know, I would still like to be someone who chooses not to walk past.
+And because I love you, I want to learn how to make that choice not only in the streets where strangers can see me, but in the quieter places where love asks for something much more difficult than a beautiful intention.
+The rain will come again. I am sure of that much.
+I only hope that, when it does, we will recognize what is in front of us.
+And that we will remember to stop.
+Yours, still learning.`}];
+
+const $=s=>document.querySelector(s);
+const done=new Set();let cur=0,bpm=72,AC=null,muted=false,ambG=null;
+
+/* ---------- Perlin noise ---------- */
+const P=new Uint8Array(512);(()=>{let s=1337;const r=()=>(s=(s*16807)%2147483647)/2147483647;const p=[...Array(256).keys()];for(let i=255;i>0;i--){const j=Math.floor(r()*(i+1));[p[i],p[j]]=[p[j],p[i]]}for(let i=0;i<512;i++)P[i]=p[i&255]})();
+const fade=t=>t*t*t*(t*(t*6-15)+10),lerp=(a,b,t)=>a+t*(b-a);
+function grad(h,x,y,z){h&=15;const u=h<8?x:y,v=h<4?y:(h==12||h==14)?x:z;return((h&1)?-u:u)+((h&2)?-v:v)}
+function noise(x,y,z){const fx=Math.floor(x),fy=Math.floor(y),fz=Math.floor(z),X=fx&255,Y=fy&255,Z=fz&255;x-=fx;y-=fy;z-=fz;const u=fade(x),v=fade(y),w=fade(z);
+const A=P[X]+Y,AA=P[A]+Z,AB=P[A+1]+Z,B=P[X+1]+Y,BA=P[B]+Z,BB=P[B+1]+Z;
+return lerp(lerp(lerp(grad(P[AA],x,y,z),grad(P[BA],x-1,y,z),u),lerp(grad(P[AB],x,y-1,z),grad(P[BB],x-1,y-1,z),u),v),lerp(lerp(grad(P[AA+1],x,y,z-1),grad(P[BA+1],x-1,y,z-1),u),lerp(grad(P[AB+1],x,y-1,z-1),grad(P[BB+1],x-1,y-1,z-1),u),v),w)}
+const sm=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
+
+/* ---------- cerebrum surface: ellipsoid + gyri/sulci + fissures ---------- */
+function surf(dx,dy,dz,o){
+ let x=dx*.72,y=dy*(dy<0?.42:.56),z=dz*.97;
+ x*=1-.17*sm(-.1,-.95,z);
+ x*=1+.09*Math.exp(-(((y+.18)/.22)**2))*Math.exp(-(((z-.06)/.5)**2));
+ const px=x*5.4,py=y*5.4,pz=z*5.4;
+ const wx=noise(px*.45+5,py*.45,pz*.45)*1.4,wy=noise(px*.45,py*.45+7,pz*.45)*1.4,wz=noise(px*.45,py*.45,pz*.45+11)*1.4;
+ const n1=noise(px+wx,py+wy,pz+wz),n2=noise(px*2.2+wy+3,py*2.2+wz,pz*2.2+wx+9);
+ const s1=1-sm(0,.13,Math.abs(n1)),s2=(1-sm(0,.1,Math.abs(n2)))*.62,sul=Math.max(s1,s2);
+ const ax=Math.abs(x);
+ const gs=Math.exp(-(((y-(-.05+.2*(z+.3)))/.03)**2))*sm(.33,.5,ax)*sm(-.6,-.3,z)*(1-sm(.35,.62,z));
+ const fx=Math.exp(-((ax/.04)**2))*sm(-.35,.1,dy);
+ const k=1-.09*sul-.11*gs-.3*fx+noise(x*22,y*22,z*22)*.0035;
+ o.x=x*k;o.y=y*k;o.z=z*k;o.sul=Math.max(sul,gs*1.2,fx);return o}
+
+const ANCH=[null,{d:[.45,.55,-.7],w:1},{d:[.55,.75,.4],w:1},{d:[.95,-.35,.1],w:1.05},{d:[.5,.85,-.2],w:.8},{d:[.9,.02,-.45],w:.55},{d:[.4,-.55,-.7],w:.85},{d:[.97,-.12,-.1],w:.45},null,{d:[.35,.1,.95],w:.85},null,{d:[.55,-.75,.2],w:.55}];
+ANCH.forEach(a=>{if(a){const l=Math.hypot(...a.d);a.d=a.d.map(v=>v/l)}});
+const lin=(r,g,b)=>[Math.pow(r,2.2),Math.pow(g,2.2),Math.pow(b,2.2)];
+
+/* ---------- three.js setup ---------- */
+let W=innerWidth,H=innerHeight;
+const renderer=new THREE.WebGLRenderer({canvas:$('#gl'),antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(W,H);
+renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x03080a);scene.fog=new THREE.FogExp2(0x03080a,.03);
+const cam=new THREE.PerspectiveCamera(36,W/H,.05,60);
+
+/* environment (soft boxes + lamp) so the wet tissue and steel catch real reflections */
+(function(){const c=document.createElement('canvas');c.width=1024;c.height=512;const g=c.getContext('2d');
+ let gr=g.createLinearGradient(0,0,0,512);gr.addColorStop(0,'#16323a');gr.addColorStop(.5,'#0a181c');gr.addColorStop(1,'#030708');g.fillStyle=gr;g.fillRect(0,0,1024,512);
+ const blob=(x,y,r,col)=>{const q=g.createRadialGradient(x,y,0,x,y,r);q.addColorStop(0,col);q.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=q;g.fillRect(x-r,y-r,r*2,r*2)};
+ blob(512,70,160,'rgba(255,248,235,1)');blob(150,160,110,'rgba(120,220,210,.55)');blob(800,150,120,'rgba(255,235,210,.5)');blob(330,100,70,'rgba(255,255,255,.7)');blob(700,90,60,'rgba(255,255,255,.6)');
+ const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;t.encoding=THREE.sRGBEncoding;
+ const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromEquirectangular(t).texture})();
+
+/* ---------- the theatre ---------- */
+function tileTex(){const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.fillStyle='#c9ddd8';g.fillRect(0,0,256,256);g.strokeStyle='#7f9a96';g.lineWidth=5;g.strokeRect(0,0,256,256);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(14,7);t.anisotropy=4;t.encoding=THREE.sRGBEncoding;return t}
+const room=new THREE.Mesh(new THREE.BoxGeometry(24,14,24),new THREE.MeshStandardMaterial({map:tileTex(),color:0x3d5a58,roughness:.4,side:THREE.BackSide,envMapIntensity:.5}));room.position.y=3.2;room.receiveShadow=true;scene.add(room);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(24,24),new THREE.MeshStandardMaterial({color:0x16282a,roughness:.22,metalness:.15,envMapIntensity:.8}));floor.rotation.x=-Math.PI/2;floor.position.y=-3;floor.receiveShadow=true;scene.add(floor);
+const steel=new THREE.MeshStandardMaterial({color:0xaab6b8,metalness:1,roughness:.28,envMapIntensity:1.2});
+const add=(m,x,y,z)=>{m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;scene.add(m);return m};
+add(new THREE.Mesh(new THREE.CylinderGeometry(.22,.3,2.2,28),steel),0,-1.88,0);
+add(new THREE.Mesh(new THREE.CylinderGeometry(.95,1,.08,40),steel),0,-2.96,0);
+add(new THREE.Mesh(new THREE.BoxGeometry(3.6,.06,2.6),steel),0,-.8,0);
+const cloth=new THREE.MeshStandardMaterial({color:0x1d6a5d,roughness:.95,envMapIntensity:.15});
+add(new THREE.Mesh(new THREE.BoxGeometry(3.4,.03,2.4),cloth),0,-.765,0);
+add(new THREE.Mesh(new THREE.BoxGeometry(3.4,.9,.03),cloth),0,-1.2,1.2);add(new THREE.Mesh(new THREE.BoxGeometry(3.4,.9,.03),cloth),0,-1.2,-1.2);
+add(new THREE.Mesh(new THREE.BoxGeometry(.03,.9,2.4),cloth),1.7,-1.2,0);add(new THREE.Mesh(new THREE.BoxGeometry(.03,.9,2.4),cloth),-1.7,-1.2,0);
+{const pts=[[0,0],[1.05,0],[1.2,.05],[1.32,.17],[1.3,.19],[1.18,.09],[0,.06]].map(p=>new THREE.Vector2(p[0],p[1]));add(new THREE.Mesh(new THREE.LatheGeometry(pts,64),steel),0,-.75,0)}
+add(new THREE.Mesh(new THREE.TorusGeometry(.5,.14,24,60),new THREE.MeshStandardMaterial({color:0x245a70,roughness:.85,envMapIntensity:.2})),0,-.5,.2).rotation.x=Math.PI/2;
+
+/* surgical lamp */
+const lamp=new THREE.Group();lamp.position.set(.2,3.1,.3);scene.add(lamp);
+lamp.add(new THREE.Mesh(new THREE.CylinderGeometry(.82,.88,.16,56),new THREE.MeshStandardMaterial({color:0x2a3a3d,metalness:.8,roughness:.35})));
+{const l=new THREE.Mesh(new THREE.CircleGeometry(.74,56),new THREE.MeshBasicMaterial({color:0xfff2dc}));l.rotation.x=Math.PI/2;l.position.y=-.085;lamp.add(l);
+ for(let i=0;i<30;i++){const a=i/30*6.283,m=new THREE.Mesh(new THREE.SphereGeometry(.03,10,8),new THREE.MeshBasicMaterial({color:0xffffff}));m.position.set(Math.cos(a)*.62,-.09,Math.sin(a)*.62);lamp.add(m)}
+ const rod=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,7,10),steel);rod.position.y=3.6;lamp.add(rod)}
+const key=new THREE.SpotLight(0xfff4e6,0,0,.34,.55,1.2);key.position.set(.2,3,.3);key.target.position.set(0,0,0);key.castShadow=true;
+key.shadow.mapSize.set(2048,2048);key.shadow.bias=-.0004;key.shadow.normalBias=.02;key.shadow.camera.near=1;key.shadow.camera.far=7;scene.add(key,key.target);
+const rim=new THREE.PointLight(0x5fd1c4,.9,9,1.5);rim.position.set(-3,.8,-2.2);scene.add(rim);
+const warm=new THREE.PointLight(0xff9a80,.35,8,1.5);warm.position.set(2.2,-.1,2.2);scene.add(warm);
+scene.add(new THREE.HemisphereLight(0x2a5a60,0x050a0b,.35));
+const coneMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,uniforms:{uI:{value:0}},
+ vertexShader:'varying vec2 vUv;varying vec3 vN;varying vec3 vV;void main(){vUv=uv;vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
+ fragmentShader:'uniform float uI;varying vec2 vUv;varying vec3 vN;varying vec3 vV;void main(){float f=pow(abs(dot(normalize(vN),normalize(vV))),1.8);gl_FragColor=vec4(vec3(.85,1.,.97),vUv.y*vUv.y*f*uI);}'});
+{const c=new THREE.Mesh(new THREE.CylinderGeometry(.78,1.3,3,56,1,true),coneMat);c.position.set(.1,1.55,.15);scene.add(c)}
+/* dust in the light */
+const dN=500,dP=new Float32Array(dN*3);for(let i=0;i<dN;i++){const a=Math.random()*6.283,r=Math.sqrt(Math.random())*(.8+Math.random()*.4),y=Math.random()*3;dP[i*3]=Math.cos(a)*r*(.5+y/3*.5)+.1;dP[i*3+1]=y;dP[i*3+2]=Math.sin(a)*r*(.5+y/3*.5)+.15}
+const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(dP,3));
+const dust=new THREE.Points(dg,new THREE.PointsMaterial({color:0xe8fff8,size:.012,transparent:true,opacity:.55,depthWrite:false,blending:THREE.AdditiveBlending}));scene.add(dust);
+
+/* ---------- vitals monitor ---------- */
+const mc=document.createElement('canvas');mc.width=512;mc.height=300;const mg=mc.getContext('2d'),mtex=new THREE.CanvasTexture(mc);mtex.encoding=THREE.sRGBEncoding;
+const mon=new THREE.Group();mon.position.set(2.9,.5,-2.3);mon.rotation.y=-.62;scene.add(mon);
+mon.add(new THREE.Mesh(new THREE.BoxGeometry(1.5,.9,.07),new THREE.MeshStandardMaterial({color:0x1a2528,roughness:.5,metalness:.6})));
+{const s=new THREE.Mesh(new THREE.PlaneGeometry(1.4,.8),new THREE.MeshBasicMaterial({map:mtex}));s.position.z=.04;mon.add(s);
+ const p=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,3,10),steel);p.position.set(0,-1.9,-.05);mon.add(p)}
+const ys=new Array(300).fill(0);let tk=0,lastPh=0,mt=0;
+const pulse=ph=>ph<.06?-8*Math.sin(ph/.06*Math.PI):(ph>.12&&ph<.14)?10:(ph>=.14&&ph<.17)?-60:(ph>=.17&&ph<.2)?18:(ph>.3&&ph<.42)?-12*Math.sin((ph-.3)/.12*Math.PI):0;
+function drawMon(dt){tk+=dt*bpm/60;const ph=tk%1;if(ph>=.14&&lastPh<.14)beep();lastPh=ph;
+ for(let k=0;k<3;k++){ys.push(pulse((tk+k*.004)%1));ys.shift()}
+ mg.fillStyle='#02100f';mg.fillRect(0,0,512,300);mg.strokeStyle='#0c3a36';mg.lineWidth=1;for(let x=0;x<512;x+=32){mg.beginPath();mg.moveTo(x,0);mg.lineTo(x,300);mg.stroke()}for(let y=0;y<300;y+=30){mg.beginPath();mg.moveTo(0,y);mg.lineTo(512,y);mg.stroke()}
+ mg.strokeStyle='#6fd6c8';mg.lineWidth=3;mg.shadowColor='#6fd6c8';mg.shadowBlur=8;mg.beginPath();ys.forEach((v,i)=>{const X=i*512/300,Y=120+v*1.1;i?mg.lineTo(X,Y):mg.moveTo(X,Y)});mg.stroke();mg.shadowBlur=0;
+ mg.fillStyle='#6fd6c8';mg.font='600 70px sans-serif';mg.fillText(Math.round(bpm+Math.sin(tk*3)*1.5),30,265);mg.font='500 24px sans-serif';mg.fillText('HR',150,265);
+ mg.fillStyle='#8ae';mg.font='500 26px sans-serif';mg.fillText('SpO2 98',300,255);mg.fillStyle='#8fb3ae';mg.fillText('patient: M',300,290);
+ mtex.needsUpdate=true}
+
+/* ---------- the brain ---------- */
+const brainG=new THREE.Group();scene.add(brainG);
+const WS=300,HS=220,bgeo=new THREE.SphereGeometry(1,WS,HS);bgeo.rotateX(Math.PI/2);
+const bp=bgeo.attributes.position,nv=bp.count,base=new Float32Array(nv*3),reg=new Uint8Array(nv),o={},tmp=[0,0,0];
+const gyr=lin(.86,.63,.58),sul=lin(.34,.09,.11),pale=lin(.9,.74,.62);
+for(let i=0;i<nv;i++){
+ let dx=bp.getX(i),dy=bp.getY(i),dz=bp.getZ(i);const l=Math.hypot(dx,dy,dz);dx/=l;dy/=l;dz/=l;
+ surf(dx,dy,dz,o);bp.setXYZ(i,o.x,o.y,o.z);
+ const t=Math.pow(Math.min(1,o.sul),.85),v=.93+noise(o.x*3,o.y*3,o.z*3)*.1,pm=Math.max(0,noise(o.x*4+20,o.y*4,o.z*4))*.35;
+ for(let c=0;c<3;c++)base[i*3+c]=(lerp(lerp(gyr[c],pale[c],pm),sul[c],t))*v;
+ let best=1,bs=9;const ax=Math.abs(dx);for(let k=1;k<=11;k++){const a=ANCH[k];if(!a)continue;const sc=(1-(ax*a.d[0]+dy*a.d[1]+dz*a.d[2]))/(a.w*a.w);if(sc<bs){bs=sc;best=k}}reg[i]=best}
+bgeo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(base),3));
+bgeo.computeVertexNormals();
+{const n=bgeo.attributes.normal,v=new THREE.Vector3();
+ for(let iy=0;iy<=HS;iy++){const s=iy*(WS+1);if(iy===0||iy===HS){v.set(0,0,0);for(let ix=0;ix<=WS;ix++)v.add(new THREE.Vector3(n.getX(s+ix),n.getY(s+ix),n.getZ(s+ix)));v.normalize();for(let ix=0;ix<=WS;ix++)n.setXYZ(s+ix,v.x,v.y,v.z)}
+ else{v.set(n.getX(s)+n.getX(s+WS),n.getY(s)+n.getY(s+WS),n.getZ(s)+n.getZ(s+WS)).normalize();n.setXYZ(s,v.x,v.y,v.z);n.setXYZ(s+WS,v.x,v.y,v.z)}}n.needsUpdate=true}
+bgeo.computeBoundingSphere();
+const bmat=new THREE.MeshPhysicalMaterial({vertexColors:true,roughness:.5,metalness:0,clearcoat:1,clearcoatRoughness:.2,envMapIntensity:.9,emissive:0x1a0508,emissiveIntensity:.5});
+const brain=new THREE.Mesh(bgeo,bmat);brain.castShadow=brain.receiveShadow=true;brain.userData.reg=reg;brainG.add(brain);
+
+/* cerebellum + brainstem */
+function foliaMesh(gx,gy,gz,sx,sy,sz,px,py,pz,tintK){
+ const g=new THREE.SphereGeometry(1,150,100),p=g.attributes.position,col=new Float32Array(p.count*3);
+ for(let i=0;i<p.count;i++){const dx=p.getX(i),dy=p.getY(i),dz=p.getZ(i);const f=.5+.5*Math.sin((dy*34+noise(dx*2,dy*2,dz*2)*1.6)*1);const k=1-.06*(1-f)-.1*Math.exp(-((dx/.06)**2));
+  p.setXYZ(i,dx*k*sx,dy*k*sy,dz*k*sz);const t=1-f;for(let c=0;c<3;c++)col[i*3+c]=lerp(lerp(gyr[c],pale[c],.2),sul[c],t*.85)*.92}
+ g.setAttribute('color',new THREE.BufferAttribute(col,3));g.computeVertexNormals();
+ const m=new THREE.Mesh(g,bmat.clone());m.position.set(px,py,pz);m.castShadow=m.receiveShadow=true;brainG.add(m);return m}
+const cereb=foliaMesh(0,0,0,.46,.24,.34,0,-.3,.64);cereb.userData.fixed=8;
+const sg=new THREE.CylinderGeometry(.115,.085,.55,36,20),sp=sg.attributes.position,sc2=new Float32Array(sp.count*3);
+for(let i=0;i<sp.count;i++){const x=sp.getX(i),y=sp.getY(i),z=sp.getZ(i),k=1+noise(x*14,y*14,z*14)*.05;sp.setXYZ(i,x*k,y,z*k);for(let c=0;c<3;c++)sc2[i*3+c]=lerp(pale[c],gyr[c],.3)*.95}
+sg.setAttribute('color',new THREE.BufferAttribute(sc2,3));sg.computeVertexNormals();
+const stem=new THREE.Mesh(sg,bmat.clone());stem.position.set(0,-.5,.25);stem.rotation.x=.28;stem.castShadow=stem.receiveShadow=true;stem.userData.fixed=10;brainG.add(stem);
+
+/* surface vessels */
+{let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647,vm=new THREE.MeshStandardMaterial({color:0x7a1822,roughness:.35,envMapIntensity:.8}),v=new THREE.Vector3();
+ for(let k=0;k<44;k++){let a=new THREE.Vector3(rnd()-.5,rnd()*.9-.2,rnd()-.5).normalize();const pts=[],tg=new THREE.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize();
+  for(let j=0;j<11;j++){a.add(tg.clone().multiplyScalar(.1)).normalize();tg.add(new THREE.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).multiplyScalar(.5)).normalize();surf(a.x,a.y,a.z,o);v.set(o.x,o.y,o.z);pts.push(v.clone().multiplyScalar(1.004))}
+  const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),26,.0028+rnd()*.0028,5),vm);m.castShadow=true;brainG.add(m)}}
+
+/* ---------- scalpel ---------- */
+const scal=new THREE.Group();
+{const sm2=new THREE.MeshStandardMaterial({color:0xdfe5e8,metalness:1,roughness:.16,envMapIntensity:1.7});
+ const h=new THREE.Mesh(new THREE.BoxGeometry(.017,.011,.24),new THREE.MeshStandardMaterial({color:0xc5ced1,metalness:1,roughness:.3,envMapIntensity:1.3}));h.position.z=.17;
+ const nk=new THREE.Mesh(new THREE.CylinderGeometry(.0035,.0075,.06,12),sm2);nk.rotation.x=Math.PI/2;nk.position.z=.047;
+ const s=new THREE.Shape();s.moveTo(0,0);s.lineTo(.02,.0065);s.lineTo(.056,.0065);s.lineTo(.056,-.0115);s.lineTo(.034,-.0115);s.quadraticCurveTo(.012,-.008,0,0);
+ const bg=new THREE.ExtrudeGeometry(s,{depth:.0014,bevelEnabled:false});bg.translate(0,0,-.0007);bg.rotateY(-Math.PI/2);
+ const bl=new THREE.Mesh(bg,sm2);bl.position.z=-.002;
+ [h,nk,bl].forEach(m=>{m.castShadow=true;scal.add(m)})}
+scal.scale.setScalar(1.25);scal.visible=false;scene.add(scal);
+
+/* ---------- region helpers ---------- */
+const NRM=(x,y,z)=>new THREE.Vector3(x/.5184,y/.3136,z/.9409).normalize();
+function regionPoint(k,sx){const a=ANCH[k],p=new THREE.Vector3();let n=new THREE.Vector3();
+ if(k===8){p.set(sx*.44,-.34,.7);n.set(sx,-.1,.25).normalize()}else if(k===10){p.set(sx*.1,-.52,.25);n.set(sx,0,.05).normalize()}
+ else{surf(a.d[0]*sx,a.d[1],a.d[2],o);p.set(o.x,o.y,o.z);n=NRM(o.x,o.y,o.z)}return{p,n}}
+const rayc=new THREE.Raycaster(),pick=[brain,cereb,stem];
+function regOf(hit){const m=hit.object;return m.userData.fixed||m.userData.reg[hit.face.a]}
+let tinted=0;const colA=bgeo.attributes.color,tealL=lin(.12,.8,.72);
+function tint(k){if(k===tinted)return;tinted=k;const c=colA.array;
+ for(let i=0;i<nv;i++){const on=reg[i]===k;for(let j=0;j<3;j++)c[i*3+j]=on?base[i*3+j]*.55+tealL[j]*.42:base[i*3+j]}colA.needsUpdate=true;
+ [cereb,stem].forEach(m=>{m.material.emissive.setRGB(0,0,0);if(m.userData.fixed===k)m.material.emissive.setRGB(.03,.3,.26)})}
+
+/* ---------- pins & list ---------- */
+const pins=[];
+R.forEach((r,i)=>{const k=i+1,e=document.createElement('div');e.className='pin';e.textContent=k;e.dataset.i=k;e.setAttribute('role','button');e.setAttribute('tabindex','0');e.setAttribute('aria-label',r.n+': '+r.t);document.body.appendChild(e);pins.push({e,k});
+ const b=document.createElement('button');b.textContent=k+'. '+r.n;b.dataset.i=k;$('#list').appendChild(b)});
+
+/* ---------- orbit ---------- */
+const S={th:-1.45,ph:1.25,r:3.4,vth:0,vph:0,drag:false,focus:null,sx:0,sy:0,shift:0,shiftY:0,mx:0,my:0,moved:false,down:null,hover:0,cutting:null,intro:0};
+const ndc=new THREE.Vector2(9,9);
+const cv=$('#gl');
+cv.addEventListener('pointerdown',e=>{ndc.set(e.clientX/W*2-1,-(e.clientY/H)*2+1);S.drag=true;S.down=[e.clientX,e.clientY];S.moved=false;S.focus=null;cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{S.mx=e.clientX;S.my=e.clientY;ndc.set(e.clientX/W*2-1,-(e.clientY/H)*2+1);const t=$('#tag');t.style.left=e.clientX+'px';t.style.top=e.clientY+'px';
+ if(S.drag){const dx=e.movementX,dy=e.movementY;if(Math.hypot(e.clientX-S.down[0],e.clientY-S.down[1])>6)S.moved=true;S.vth-=dx*.0045;S.vph-=dy*.0035}});
+cv.addEventListener('pointerup',e=>{S.drag=false;if(S.moved||S.cutting)return;ndc.set(e.clientX/W*2-1,-(e.clientY/H)*2+1);rayc.setFromCamera(ndc,cam);const h=rayc.intersectObjects(pick,false)[0];if(h)cutTo(regOf(h))});
+cv.addEventListener('pointerleave',()=>ndc.set(9,9));
+cv.addEventListener('wheel',e=>{e.preventDefault();S.r=Math.min(5,Math.max(1.3,S.r*(1+e.deltaY*.001)))},{passive:false});
+document.addEventListener('click',e=>{const t=e.target.closest('.pin,#list button');if(t&&!S.cutting)cutTo(+t.dataset.i)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')shut();if(e.key==='Enter'&&e.target.classList.contains('pin'))cutTo(+e.target.dataset.i)});
+pins.forEach(p=>{p.e.addEventListener('mouseenter',()=>{S.pinHover=p.k});p.e.addEventListener('mouseleave',()=>{S.pinHover=0})});
+
+function cutTo(k){if(!ANCH[k]&&k!==8&&k!==10)return;audio();const sx=cam.position.x>=0?1:-1,{p,n}=regionPoint(k,sx);
+ S.focus={th:Math.atan2(p.x,p.z),ph:Math.min(1.6,Math.max(.35,Math.acos(p.y/p.length()))),r:2.15};
+ const up=new THREE.Vector3(0,1,0),t=new THREE.Vector3().crossVectors(n,up);if(t.lengthSq()<.01)t.set(1,0,0);t.normalize();
+ S.cutting={k,p,n,t,time:-.9,pts:[]};tint(k)}
+function showPanel(k){cur=k;const r=R[k-1];$('#pn').textContent='Region '+k+' of 11';$('#pt').textContent=r.n;$('#ps').textContent=r.t;
+ $('#txt').innerHTML=r.s.split('\n').map(l=>'<p>'+l.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</p>').join('');$('#txt').scrollTop=0;
+ document.body.classList.add('open');bpm=90;done.add(k);
+ document.querySelectorAll('.pin[data-i="'+k+'"],#list button[data-i="'+k+'"]').forEach(x=>x.classList.add('done'));
+ $('#cnt').textContent=done.size+' of 11 regions opened';if(done.size===11)$('#close').classList.add('show')}
+function shut(){document.body.classList.remove('open');bpm=72}
+$('#px').onclick=shut;$('#pv').onclick=()=>cutTo(cur>1?cur-1:11);$('#nx').onclick=()=>cutTo(cur<11?cur+1:1);
+$('#close').onclick=()=>{shut();$('#end').classList.add('show')};$('#end').onclick=()=>$('#end').classList.remove('show');
+$('#go').onclick=()=>{audio();$('#intro').classList.add('gone');S.intro=.001};
+$('#mute').onclick=()=>{muted=!muted;$('#mute').textContent=muted?'sound off':'sound on';if(ambG)ambG.gain.value=muted?0:.06};
+
+/* ---------- sound ---------- */
+function audio(){if(AC)return;AC=new(window.AudioContext||window.webkitAudioContext)();const b=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+ const s=AC.createBufferSource();s.buffer=b;s.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=150;ambG=AC.createGain();ambG.gain.value=muted?0:.06;s.connect(f);f.connect(ambG);ambG.connect(AC.destination);s.start()}
+function beep(){if(!AC||muted)return;const o2=AC.createOscillator(),g=AC.createGain();o2.frequency.value=880;o2.connect(g);g.connect(AC.destination);const t=AC.currentTime;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.05,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+.09);o2.start(t);o2.stop(t+.1)}
+function slice(){if(!AC||muted)return;const n=AC.sampleRate*.35,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=3200;const g=AC.createGain();g.gain.value=.12;s.connect(f);f.connect(g);g.connect(AC.destination);s.start()}
+
+/* ---------- loop ---------- */
+const clock=new THREE.Clock(),V=new THREE.Vector3(),sPos=new THREE.Vector3(),sTarget=new THREE.Vector3(),bx=new THREE.Matrix4();
+const incMat=new THREE.MeshStandardMaterial({color:0x5a0710,roughness:.3,emissive:0x2a0206});
+function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
+ /* lights on */
+ if(S.intro){S.intro+=dt;const q=Math.min(1,S.intro/2.6),fl=q<.6?(Math.sin(S.intro*37)>.2?1:.15):1;key.intensity=2.6*q*fl;coneMat.uniforms.uI.value=.13*q*fl}
+ /* orbit */
+ if(S.focus){const f=S.focus;let d=f.th-S.th;d=Math.atan2(Math.sin(d),Math.cos(d));S.th+=d*Math.min(1,dt*3.2);S.ph+=(f.ph-S.ph)*Math.min(1,dt*3.2);S.r+=(f.r-S.r)*Math.min(1,dt*3.2)}
+ else{S.th+=S.vth;S.ph+=S.vph;S.vth*=.9;S.vph*=.9;if(!S.drag&&!document.body.classList.contains('open')&&!S.cutting)S.th+=dt*.03}
+ S.ph=Math.min(1.72,Math.max(.25,S.ph));
+ cam.position.set(S.r*Math.sin(S.ph)*Math.sin(S.th),S.r*Math.cos(S.ph),S.r*Math.sin(S.ph)*Math.cos(S.th));cam.lookAt(0,-.05,0);
+ const open=document.body.classList.contains('open'),wide=W>900;
+ S.shift+=((open&&wide?Math.min(540,W)*.5:0)-S.shift)*Math.min(1,dt*4);S.shiftY+=((open&&!wide?H*.17:0)-S.shiftY)*Math.min(1,dt*4);
+ cam.setViewOffset(W,H,S.shift,S.shiftY,W,H);cam.updateMatrixWorld();
+ brainG.position.y=Math.sin(t*1.1)*.002;brainG.scale.setScalar(1+Math.sin(t*(bpm/60)*6.283)*.0012);
+ /* hover pick */
+ rayc.setFromCamera(ndc,cam);const hit=rayc.intersectObjects(pick,false)[0];let hk=0;
+ if(hit&&!S.drag&&!S.cutting)hk=regOf(hit);if(S.pinHover&&!S.cutting)hk=S.pinHover;
+ S.hover=hk;if(!S.cutting)tint(hk);
+ const tg=$('#tag');if(hk&&!S.cutting){tg.textContent=R[hk-1].n+': '+R[hk-1].t;tg.style.opacity=1}else tg.style.opacity=0;
+ /* scalpel */
+ const c=S.cutting;scal.visible=S.intro>1.4&&ndc.x<8&&!document.querySelector('#panel:hover');
+ if(c){c.time+=dt;const u=Math.min(1,Math.max(0,c.time/.7)),e=u*u*(3-2*u);
+  if(c.time<0){sTarget.copy(c.p).addScaledVector(c.n,.09+(-c.time)*.1)}
+  else{sTarget.copy(c.p).addScaledVector(c.t,(e-.5)*.26).addScaledVector(c.n,.002+.07*(1-Math.sin(Math.min(1,u*1.4)*1.5708))*(u<.15?1:0)+(u>.9?(u-.9)*.4:0));
+   if(c.time>.03&&c.time<.7&&c.pts.length<14&&Math.floor(u*14)>c.pts.length)c.pts.push(sTarget.clone())}
+  if(c.time>0&&c.time-dt<=0)slice();scal.visible=true;
+  if(c.time>.95){const pts=c.pts.map(p=>{rayc.set(p.clone().addScaledVector(c.n,.2),c.n.clone().negate());const h=rayc.intersectObject(brain)[0]||rayc.intersectObjects([cereb,stem])[0];return h?h.point.clone().addScaledVector(c.n,.002):p});
+   if(pts.length>2){const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),28,.004,6),incMat);brainG.add(m)}
+   showPanel(c.k);S.cutting=null;S.focus={th:S.th,ph:S.ph,r:2.5};setTimeout(()=>{if(!S.drag)S.focus=null},900)}}
+ else if(hit){sTarget.copy(hit.point).addScaledVector(hit.face.normal.clone().transformDirection(hit.object.matrixWorld),.01)}
+ else{V.set(ndc.x,ndc.y,.5).unproject(cam).sub(cam.position).normalize();sTarget.copy(cam.position).addScaledVector(V,S.r*.82)}
+ sPos.lerp(sTarget,c?.35:.22);scal.position.copy(sPos);
+ {const N=c?c.n:(hit?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):V.copy(cam.position).normalize()),right=new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld,0);
+  const h=N.clone().multiplyScalar(.7).addScaledVector(right,.62).addScaledVector(new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld,1),.25).normalize();
+  const xa=new THREE.Vector3().crossVectors(N,h);if(xa.lengthSq()<1e-4)xa.set(1,0,0);xa.normalize();const ya=new THREE.Vector3().crossVectors(h,xa);bx.makeBasis(xa,ya,h);scal.quaternion.setFromRotationMatrix(bx)}
+ /* dust */
+ for(let i=0;i<dN;i++){dP[i*3+1]-=dt*.025;dP[i*3]+=Math.sin(t*.3+i)*.0004;if(dP[i*3+1]<0)dP[i*3+1]=3}dg.attributes.position.needsUpdate=true;
+ /* pins */
+ const sx=cam.position.x>=0?1:-1;
+ pins.forEach(p=>{const{p:wp,n}=regionPoint(p.k,sx);V.copy(wp).project(cam);p.e.style.transform='translate('+((V.x*.5+.5)*W)+'px,'+((-V.y*.5+.5)*H)+'px)';
+  const face=n.dot(V.copy(cam.position).sub(wp).normalize());p.e.classList.toggle('hide',face<.12||S.intro<1.6||!!S.cutting)});
+ drawMon(dt);renderer.render(scene,cam)}
+addEventListener('resize',()=>{W=innerWidth;H=innerHeight;renderer.setSize(W,H);cam.aspect=W/H;cam.updateProjectionMatrix()});
+frame();
+</script>
+</body>
+</html>
